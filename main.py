@@ -22,7 +22,7 @@ class App():
         self.image_pub = rospy.Publisher("hex_image",Image,queue_size=10)
         self.cam = cv2.VideoCapture(0)
 
-        self.command_queue = queue.Queue()
+        self.command_queue = queue.Queue(maxsize=1)
 
         self.hexapod = Hexapod()
 
@@ -47,10 +47,14 @@ class App():
 
     def run(self):
         cv2.namedWindow('webcam', cv2.WINDOW_NORMAL)
-        cv2.moveWindow('webcam',100,100)
-        cv2.resizeWindow('webcam',500, 500)
+        cv2.moveWindow('webcam', 100,100)
+        cv2.resizeWindow('webcam', 500, 500)
 
         rate = rospy.Rate(30)#Hz
+        dx = 0
+        dy = 0
+        dz = 0
+        d = 0.1
         while not rospy.is_shutdown():
             try:
                 ret_val, cv_image = self.cam.read()
@@ -64,6 +68,15 @@ class App():
                     self.moveHexapod(joy_command)
                 except queue.Empty:
                     pass#no command in the queque
+
+                self.hexapod.setBody(dx,dy,dz,0,0,5)
+                dx += d
+                dy += d
+                dz += d
+                if dx > 30:
+                    d = -d
+                elif d < -30:
+                    d = -d
 
             except CvBridgeError as e:
                 print(e)
