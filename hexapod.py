@@ -37,13 +37,13 @@ class Hexapod():
             servo_angle['c'] = 0
             self.servo_angles.append(servo_angle)
 
-        self.ik_position = []
+        self.leg_pose = []
         for leg in range(0, 6):
             leg_pose = {}
             leg_pose['x'] = 0
             leg_pose['y'] = 0
             leg_pose['z'] = 0
-            self.ik_position.append(leg_pose)
+            self.leg_pose.append(leg_pose)
 
         self.ik_adjustments = []
         for leg in range(0, 6):
@@ -124,18 +124,18 @@ class Hexapod():
         for leg in range(0, 6):
             theta = self.leg_position_offsets[leg]['t'] * math.pi / 180.0
 
-            self.ik_position[leg]['x'] = x * math.cos(theta)
-            self.ik_position[leg]['y'] = y * math.sin(theta)
-            self.ik_position[leg]['z'] = z
+            self.leg_pose[leg]['x'] = x * math.cos(theta)
+            self.leg_pose[leg]['y'] = y * math.sin(theta)
+            self.leg_pose[leg]['z'] = z
       
     def bodyIK(self, leg, dx, dy, dz, rx, ry, rz):
         rx = rx * math.pi / 180
         ry = ry * math.pi / 180
         rz = rz * math.pi / 180
 
-        total_x = self.ik_position[leg]['x'] + dx + self.leg_position_offsets[leg]['x']
-        total_y = self.ik_position[leg]['y'] + dy + self.leg_position_offsets[leg]['y']
-        total_z = self.ik_position[leg]['z']
+        total_x = self.leg_pose[leg]['x'] + dx + self.leg_position_offsets[leg]['x']
+        total_y = self.leg_pose[leg]['y'] + dy + self.leg_position_offsets[leg]['y']
+        total_z = self.leg_pose[leg]['z']
 
         srx = math.sin(rx)
         crx = math.cos(rx)
@@ -149,15 +149,15 @@ class Hexapod():
         body_ik_y = (total_x * crx * srz + total_x * crz * sry * srx + total_y * crz * crx - total_y * srz * sry * srx - total_z * cry * srx) - total_y
         body_ik_z = (total_x * srz * srx - total_x * crz * crx * sry + total_y * crz * srx + total_y * crx * srz * sry + total_z * cry * crx) - total_z
 
-        new_x = body_ik_x + dx + self.ik_position[leg]['x']
-        new_y = body_ik_y + dy + self.ik_position[leg]['y']
-        new_z = body_ik_z + dz + self.ik_position[leg]['z']
+        new_x = body_ik_x + dx + self.leg_pose[leg]['x']
+        new_y = body_ik_y + dy + self.leg_pose[leg]['y']
+        new_z = body_ik_z + dz + self.leg_pose[leg]['z']
 
-        self.draw_pose[leg]['x'] = new_x + self.leg_position_offsets[leg]['x']
-        self.draw_pose[leg]['y'] = new_y + self.leg_position_offsets[leg]['y']
+        self.draw_pose[leg]['x'] = new_x
+        self.draw_pose[leg]['y'] = new_y
         self.draw_pose[leg]['z'] = new_z
 
-        self.legIK(leg, new_x, new_y, new_z);
+        self.legIK(leg, new_x, new_y, new_z)
 
     def boundTheta(self, t):
       if t < 0:
@@ -264,48 +264,55 @@ class Hexapod():
         self.updateBodyPose()
 
     def moveLeg(self, leg, dx, dy, dz):
-        new_x = self.ik_position[leg]['x'] + dx
-        new_y = self.ik_position[leg]['y'] + dy
-        new_z = self.ik_position[leg]['z'] + dz
+        self.leg_pose[leg]['x'] = self.leg_pose[leg]['x'] + dx
+        self.leg_pose[leg]['y'] = self.leg_pose[leg]['y'] + dy
+        self.leg_pose[leg]['z'] = self.leg_pose[leg]['z'] + dz
 
-        legIK(leg, new_x, new_y, new_z)
+        self.legIK(leg, self.leg_pose[leg]['x'], self.leg_pose[leg]['y'], self.leg_pose[leg]['z'])
         self.updateAngles()
 
     def walk(self, distance, angle):
         angle = angle * math.pi/180
         
-        dx = math.cos(angle) * distance
-        dy = math.sin(angle) * distance
+        dx = math.sin(angle) * distance
+        dy = math.cos(angle) * distance
         dz = -20
 
         #Step one
-        self.moveLeg(0, dx, dy, dz)
+        print(1)
+        self.moveLeg(0, dx, dy, dz)#Up and forward
         self.moveLeg(2, dx, dy, dz)
         self.moveLeg(4, dx, dy, dz)
-        sleep(0.1)
-        self.moveLeg(1, -dx, -dy, 0)
+        sleep(1)
+        print(2)
+        self.moveLeg(1, -dx, -dy, 0)#Backward
         self.moveLeg(3, -dx, -dy, 0)
         self.moveLeg(5, -dx, -dy, 0)
-        sleep(0.5)
+        sleep(1)
 
         #Step two
-        self.moveLeg(0, dx, dy, 0)
-        self.moveLeg(2, dx, dy, 0)
-        self.moveLeg(4, dx, dy, 0)
-        sleep(0.1)
-        self.moveLeg(1, 0, 0, dz)
-        self.moveLeg(3, 0, 0, dz)
-        self.moveLeg(5, 0, 0, dz)
-        sleep(0.5)
+        print(3)
+        self.moveLeg(0, 0, 0, -dz)#Downward
+        self.moveLeg(2, 0, 0, -dz)
+        self.moveLeg(4, 0, 0, -dz)
+        sleep(1)
+        print(4)
+        self.moveLeg(1, dx, dy, dz)#Up and forward
+        self.moveLeg(3, dx, dy, dz)
+        self.moveLeg(5, dx, dy, dz)
+        sleep(1)
 
         #Step three
-        self.moveLeg(0, 0, 0, 0)
-        self.moveLeg(2, 0, 0, 0)
-        self.moveLeg(4, 0, 0, 0)
-        self.moveLeg(1, 0, 0, 0)
-        self.moveLeg(3, 0, 0, 0)
-        self.moveLeg(5, 0, 0, 0)
-        sleep(0.5)
+        print(5)
+        self.moveLeg(0, -dx, -dy, 0)#Backward
+        self.moveLeg(2, -dx, -dy, 0)
+        self.moveLeg(4, -dx, -dy, 0)
+        sleep(1)
+        print(6)
+        self.moveLeg(1, 0, 0, -dz)#Downward
+        self.moveLeg(3, 0, 0, -dz)
+        self.moveLeg(5, 0, 0, -dz)
+        sleep(1)
 
     def drawState(self):
         w = 512
@@ -315,12 +322,29 @@ class Hexapod():
         draw_x = w/2
         draw_y = h/2
         for leg in range(0, 6):
-            cv2.circle(img,(draw_x,draw_y), 5, (255,0,255), -1)
-            #coxa pose
-            x = int(self.draw_pose[leg]['x'] + draw_x)
-            y = int(self.draw_pose[leg]['y'] + draw_y)
-            cv2.circle(img,(x,y), 5, (255,0,255), -1)
+            cv2.circle(img,(int(self.body_pose['x']+draw_x),int(self.body_pose['y']+draw_y)), 5, (255,0,255), -1)
             #foot pose
+            x = int(self.leg_pose[leg]['x'] + draw_x)
+            y = int(self.leg_pose[leg]['y'] + draw_y)
+            cv2.circle(img,(x,y), 5, (0,0,255), -1)
 
+            font                   = cv2.FONT_HERSHEY_SIMPLEX
+            bottomLeftCornerOfText = (x,y)
+            fontScale              = 1
+            fontColor              = (255,255,255)
+            lineType               = 2
+
+            cv2.putText(img, str(leg), 
+                bottomLeftCornerOfText, 
+                font, 
+                fontScale,
+                fontColor,
+                lineType)
+
+            #coxa_pose
+            x = int(self.leg_position_offsets[leg]['x'] + draw_x)
+            y = int(self.leg_position_offsets[leg]['y'] + draw_y)
+            cv2.circle(img,(x,y), 5, (0,255,0), -1)
+            
         cv2.imshow('hex', img)
         cv2.waitKey(1)

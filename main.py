@@ -69,14 +69,15 @@ class App():
                 except queue.Empty:
                     pass#no command in the queque
 
-                self.hexapod.setBody(dx,dy,dz,0,0,5)
-                dx += d
-                dy += d
-                dz += d
-                if dx > 30:
-                    d = -d
-                elif d < -30:
-                    d = -d
+                # self.hexapod.setBody(dx,dy,dz,0,0,5)
+                self.hexapod.walk(20, 0)
+                # dx += d
+                # dy += d
+                # dz += d
+                # if dx > 30:
+                #     d = -d
+                # elif d < -30:
+                #     d = -d
 
             except CvBridgeError as e:
                 print(e)
